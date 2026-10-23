@@ -10,6 +10,7 @@ let state = load() || {
   obstacles: [{ id: 1, name: 'Palco', x: 7, y: 0, w: 6, h: 3 }],
 };
 let positions = {}; // id da mesa -> {x, y}
+const openTables = new Set(); // mesas com a lista de integrantes aberta no painel
 
 // Formato do salão: polígono dentro da área de largura × comprimento.
 const SHAPES = {
@@ -271,8 +272,33 @@ function renderPanel() {
       unpin.addEventListener('click', () => { t.pinned = false; update(); });
       div.append(unpin);
     }
-    div.append(delButton(() => { state.tables = state.tables.filter((x) => x !== t); update(); }));
+    const toggle = document.createElement('button');
+    toggle.textContent = '👥';
+    toggle.title = 'Integrantes da mesa';
+    toggle.addEventListener('click', () => {
+      openTables.has(t.id) ? openTables.delete(t.id) : openTables.add(t.id);
+      renderPanel();
+    });
+    div.append(toggle, delButton(() => { state.tables = state.tables.filter((x) => x !== t); update(); }));
     tl.appendChild(div);
+
+    if (openTables.has(t.id)) {
+      const guests = document.createElement('div');
+      guests.className = 'guests';
+      for (let i = 0; i < t.chairs; i++) {
+        const g = document.createElement('input');
+        g.type = 'text';
+        g.placeholder = `Cadeira ${i + 1}`;
+        g.value = t.guests?.[i] ?? '';
+        g.addEventListener('change', () => {
+          t.guests = t.guests || [];
+          t.guests[i] = g.value.trim();
+          save();
+        });
+        guests.appendChild(g);
+      }
+      tl.appendChild(guests);
+    }
   }
 
   const placed = state.tables.filter((t) => positions[t.id]);
@@ -303,22 +329,52 @@ document.querySelectorAll('[data-shape]').forEach((b) => {
 
 // ---------- Exportar ----------
 
+// Legenda: cada mesa posicionada com os nomes dos seus integrantes.
+const legend = () => state.tables
+  .filter((t) => positions[t.id])
+  .map((t) => ({ name: tableName(t), guests: (t.guests || []).slice(0, t.chairs).filter(Boolean) }));
+
 $('exportPng').addEventListener('click', () => {
   const scale = 100; // pixels por metro
   const clone = svg.cloneNode(true);
   clone.querySelectorAll('.wall, .corner').forEach((e) => e.remove());
   const [, , vw, vh] = clone.getAttribute('viewBox').split(' ').map(Number);
+  const width = Math.max(vw * scale, 800), roomH = vh * scale;
   clone.setAttribute('width', vw * scale);
-  clone.setAttribute('height', vh * scale);
+  clone.setAttribute('height', roomH);
+
+  // Distribui as mesas da legenda em colunas, sempre na coluna mais curta.
+  const colW = 300, titleH = 40, lineH = 28, gap = 24, pad = 40;
+  const cols = Math.max(1, Math.floor((width - 2 * pad) / colW));
+  const colY = Array(cols).fill(0);
+  const blocks = legend().map((b) => {
+    const c = colY.indexOf(Math.min(...colY));
+    const y = colY[c];
+    colY[c] += titleH + lineH * Math.max(1, b.guests.length) + gap;
+    return { ...b, x: pad + c * colW, y };
+  });
+  const legendH = blocks.length ? Math.max(...colY) + 2 * pad : 0;
+
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
-    canvas.width = vw * scale;
-    canvas.height = vh * scale;
+    canvas.width = width;
+    canvas.height = roomH + legendH;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, (width - vw * scale) / 2, 0);
+
+    ctx.textBaseline = 'top';
+    for (const b of blocks) {
+      const y = roomH + pad + b.y;
+      ctx.fillStyle = '#965f28';
+      ctx.font = 'bold 22px Inter, sans-serif';
+      ctx.fillText(b.name, b.x, y);
+      ctx.fillStyle = b.guests.length ? '#2b2620' : '#8a8174';
+      ctx.font = '18px Inter, sans-serif';
+      (b.guests.length ? b.guests : ['(sem integrantes)']).forEach((g, i) => ctx.fillText(g, b.x + 12, y + titleH + i * lineH));
+    }
     const a = document.createElement('a');
     a.download = 'layout-salao.png';
     a.href = canvas.toDataURL('image/png');
@@ -327,7 +383,24 @@ $('exportPng').addEventListener('click', () => {
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
 });
 
-$('exportPdf').addEventListener('click', () => window.print());
+$('exportPdf').addEventListener('click', () => {
+  const box = $('legend');
+  box.innerHTML = '';
+  for (const b of legend()) {
+    const div = document.createElement('div');
+    const h = document.createElement('h3');
+    h.textContent = b.name;
+    const ul = document.createElement('ul');
+    for (const g of b.guests.length ? b.guests : ['(sem integrantes)']) {
+      const li = document.createElement('li');
+      li.textContent = g;
+      ul.appendChild(li);
+    }
+    div.append(h, ul);
+    box.appendChild(div);
+  }
+  window.print();
+});
 $('spacing').addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (v >= 0) { state.spacing = v; update(); } });
 
 $('addObstacle').addEventListener('click', () => {
