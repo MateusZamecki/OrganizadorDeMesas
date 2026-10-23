@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Organizador de Mesas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside>
+    <h1>Organizador de Mesas</h1>
+
+    <section>
+      <h2>Salão</h2>
+      <label>Largura (m) <input id="roomW" type="number" min="2" step="0.5"></label>
+      <label>Comprimento (m) <input id="roomH" type="number" min="2" step="0.5"></label>
+      <label>Espaço entre mesas (m) <input id="spacing" type="number" min="0" step="0.1"></label>
+    </section>
+
+    <section>
+      <h2>Áreas bloqueadas</h2>
+      <p class="hint">Palco, pista, bar, pilares… Arraste no salão para mover.</p>
+      <div id="obstacleList"></div>
+      <button id="addObstacle">+ Adicionar área</button>
+    </section>
+
+    <section>
+      <h2>Mesas redondas</h2>
+      <div class="row">
+        <label>Cadeiras <input id="newChairs" type="number" min="2" max="20" value="8"></label>
+        <label>Qtd. <input id="newQty" type="number" min="1" value="1"></label>
+      </div>
+      <button id="addTable">+ Adicionar mesa(s)</button>
+      <div id="tableList"></div>
+    </section>
+
+    <p id="summary"></p>
+  </aside>
+
+  <main>
+    <svg id="room"></svg>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
