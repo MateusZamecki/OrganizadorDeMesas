@@ -11,6 +11,18 @@ let state = load() || {
 };
 let positions = {}; // id da mesa -> {x, y}
 
+// Formato do salão: polígono dentro da área de largura × comprimento.
+const SHAPES = {
+  rect: [[0, 0], [1, 0], [1, 1], [0, 1]],
+  L: [[0, 0], [1, 0], [1, 0.5], [0.5, 0.5], [0.5, 1], [0, 1]],
+  U: [[0, 0], [0.3, 0], [0.3, 0.6], [0.7, 0.6], [0.7, 0], [1, 0], [1, 1], [0, 1]],
+  T: [[0, 0], [1, 0], [1, 0.4], [0.7, 0.4], [0.7, 1], [0.3, 1], [0.3, 0.4], [0, 0.4]],
+};
+const setShape = (name) => {
+  state.room.points = SHAPES[name].map(([x, y]) => ({ x: x * state.room.w, y: y * state.room.h }));
+};
+if (!state.room.points) setShape('rect');
+
 const $ = (id) => document.getElementById(id);
 const svg = $('room');
 
@@ -32,12 +44,33 @@ function distToRect(x, y, o) {
   return Math.hypot(dx, dy);
 }
 
+function distToSegment(x, y, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(x - (a.x + t * dx), y - (a.y + t * dy));
+}
+
+function insideRoom(x, y) {
+  const pts = state.room.points;
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i], b = pts[j];
+    if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+function distToWalls(x, y) {
+  const pts = state.room.points;
+  return Math.min(...pts.map((a, i) => distToSegment(x, y, a, pts[(i + 1) % pts.length])));
+}
+
 // Menor folga até paredes, áreas bloqueadas e outras mesas (negativa = inválido).
 // A folga até a parede vale em dobro, para que a distância à parede fique ~metade do corredor entre mesas.
 function clearance(x, y, r, others) {
-  const { w, h } = state.room;
+  if (!insideRoom(x, y)) return -Infinity;
   const s = state.spacing;
-  let min = 2 * Math.min(x - r, y - r, w - x - r, h - y - r) + s;
+  let min = 2 * (distToWalls(x, y) - r) + s;
   for (const o of state.obstacles) min = Math.min(min, distToRect(x, y, o) - r);
   for (const p of others) min = Math.min(min, Math.hypot(x - p.x, y - p.y) - r - p.r);
   return min - s;
@@ -103,7 +136,8 @@ function draw() {
   const { w, h } = state.room;
   svg.setAttribute('viewBox', `-0.5 -0.5 ${w + 1} ${h + 1}`);
   svg.innerHTML = '';
-  el('rect', { x: 0, y: 0, width: w, height: h, fill: '#fbf8f1', stroke: '#c9bfae', 'stroke-width': 0.08, rx: 0.15 }, svg);
+  const pts = state.room.points;
+  el('polygon', { points: pts.map((p) => `${p.x},${p.y}`).join(' '), fill: '#fbf8f1', stroke: '#c9bfae', 'stroke-width': 0.08, 'stroke-linejoin': 'round' }, svg);
 
   for (const o of state.obstacles) {
     const g = el('g', { class: 'obstacle' }, svg);
@@ -129,17 +163,38 @@ function draw() {
       startDrag(e, t, fr, state.room.w - fr, fr, state.room.h - fr);
     });
   }
+
+  // Paredes: duplo clique numa parede cria um novo canto.
+  pts.forEach((a, i) => {
+    const b = pts[(i + 1) % pts.length];
+    const line = el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'wall', stroke: 'transparent', 'stroke-width': 0.5 }, svg);
+    line.addEventListener('dblclick', (e) => {
+      const p = toRoom(e);
+      pts.splice(i + 1, 0, { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 });
+      update();
+    });
+  });
+
+  // Cantos: arraste para mover, duplo clique para remover.
+  for (const p of pts) {
+    const c = el('circle', { cx: p.x, cy: p.y, r: 0.22, class: 'corner', fill: '#fff', stroke: '#b5793a', 'stroke-width': 0.07 }, svg);
+    c.addEventListener('pointerdown', (e) => startDrag(e, p, 0, state.room.w, 0, state.room.h));
+    c.addEventListener('dblclick', () => {
+      if (pts.length > 3) { pts.splice(pts.indexOf(p), 1); update(); }
+    });
+  }
 }
 
 const tableName = (t) => t.name ?? `Mesa ${t.num}`;
 
-// ---------- Arrastar mesas e áreas bloqueadas ----------
+function toRoom(ev) {
+  const pt = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(svg.getScreenCTM().inverse());
+  return { x: pt.x, y: pt.y };
+}
+
+// ---------- Arrastar mesas, áreas bloqueadas e cantos do salão ----------
 
 function startDrag(e, o, minX, maxX, minY, maxY) {
-  const toRoom = (ev) => {
-    const pt = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(svg.getScreenCTM().inverse());
-    return { x: pt.x, y: pt.y };
-  };
   const start = toRoom(e), ox = o.x, oy = o.y;
   const onMove = (ev) => {
     const p = toRoom(ev);
@@ -233,8 +288,46 @@ function update() {
   save();
 }
 
-$('roomW').addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (v >= 2) { state.room.w = v; update(); } });
-$('roomH').addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (v >= 2) { state.room.h = v; update(); } });
+// Mudar largura/comprimento estica o formato atual do salão.
+$('roomW').addEventListener('change', (e) => {
+  const v = parseFloat(e.target.value);
+  if (v >= 2) { state.room.points.forEach((p) => { p.x *= v / state.room.w; }); state.room.w = v; update(); }
+});
+$('roomH').addEventListener('change', (e) => {
+  const v = parseFloat(e.target.value);
+  if (v >= 2) { state.room.points.forEach((p) => { p.y *= v / state.room.h; }); state.room.h = v; update(); }
+});
+document.querySelectorAll('[data-shape]').forEach((b) => {
+  b.addEventListener('click', () => { setShape(b.dataset.shape); update(); });
+});
+
+// ---------- Exportar ----------
+
+$('exportPng').addEventListener('click', () => {
+  const scale = 100; // pixels por metro
+  const clone = svg.cloneNode(true);
+  clone.querySelectorAll('.wall, .corner').forEach((e) => e.remove());
+  const [, , vw, vh] = clone.getAttribute('viewBox').split(' ').map(Number);
+  clone.setAttribute('width', vw * scale);
+  clone.setAttribute('height', vh * scale);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = vw * scale;
+    canvas.height = vh * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    const a = document.createElement('a');
+    a.download = 'layout-salao.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+});
+
+$('exportPdf').addEventListener('click', () => window.print());
 $('spacing').addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (v >= 0) { state.spacing = v; update(); } });
 
 $('addObstacle').addEventListener('click', () => {

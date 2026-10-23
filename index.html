@@ -17,6 +17,14 @@
       <label>Largura (m) <input id="roomW" type="number" min="2" step="0.5"></label>
       <label>Comprimento (m) <input id="roomH" type="number" min="2" step="0.5"></label>
       <label>Espaço entre mesas (m) <input id="spacing" type="number" min="0" step="0.1"></label>
+      <p class="hint">Formato do salão:</p>
+      <div class="shapes">
+        <button data-shape="rect">▭ Retângulo</button>
+        <button data-shape="L">L</button>
+        <button data-shape="U">U</button>
+        <button data-shape="T">T</button>
+      </div>
+      <p class="hint">Arraste os cantos para mudar o formato. Duplo clique numa parede cria um canto; duplo clique num canto remove.</p>
     </section>
 
     <section>
@@ -37,6 +45,11 @@
     </section>
 
     <p id="summary"></p>
+
+    <div class="export">
+      <button id="exportPng">⬇ Baixar imagem</button>
+      <button id="exportPdf">🖨 Imprimir / PDF</button>
+    </div>
   </aside>
 
   <main>
