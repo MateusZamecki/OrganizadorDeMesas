@@ -1,4 +1,4 @@
-const CHAIR_WIDTH = 0.6;  // espaço de cada cadeira em volta da mesa (m)
+﻿const CHAIR_WIDTH = 0.6;  // espaÃ§o de cada cadeira em volta da mesa (m)
 const CHAIR_DEPTH = 0.5;  // quanto a cadeira ocupa para fora da mesa (m)
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -32,8 +32,8 @@ function distToRect(x, y, o) {
   return Math.hypot(dx, dy);
 }
 
-// Menor folga até paredes, áreas bloqueadas e outras mesas (negativa = inválido).
-// A folga até a parede vale em dobro, para que a distância à parede fique ~metade do corredor entre mesas.
+// Menor folga atÃ© paredes, Ã¡reas bloqueadas e outras mesas (negativa = invÃ¡lido).
+// A folga atÃ© a parede vale em dobro, para que a distÃ¢ncia Ã  parede fique ~metade do corredor entre mesas.
 function clearance(x, y, r, others) {
   const { w, h } = state.room;
   const s = state.spacing;
@@ -43,7 +43,7 @@ function clearance(x, y, r, others) {
   return min - s;
 }
 
-// ---------- Organização automática ----------
+// ---------- OrganizaÃ§Ã£o automÃ¡tica ----------
 
 function arrange() {
   const step = 0.1;
@@ -54,7 +54,7 @@ function arrange() {
   const placed = pinned.map((t) => ({ id: t.id, x: t.x, y: t.y, r: footprint(t.chairs), fixed: true }));
   positions = {};
 
-  // 1) Encaixe guloso: cada mesa (maiores primeiro) vai na primeira posição livre.
+  // 1) Encaixe guloso: cada mesa (maiores primeiro) vai na primeira posiÃ§Ã£o livre.
   for (const t of sorted) {
     const r = footprint(t.chairs);
     search:
@@ -68,7 +68,7 @@ function arrange() {
     }
   }
 
-  // 2) Espalha as mesas pelo salão, aumentando a folga de cada uma enquanto possível.
+  // 2) Espalha as mesas pelo salÃ£o, aumentando a folga de cada uma enquanto possÃ­vel.
   const dirs = [...Array(8)].map((_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
   for (const move of [1, 0.5, 0.25, 0.1, 0.05]) {
     for (let iter = 0; iter < 25; iter++) {
@@ -103,12 +103,12 @@ function draw() {
   const { w, h } = state.room;
   svg.setAttribute('viewBox', `-0.5 -0.5 ${w + 1} ${h + 1}`);
   svg.innerHTML = '';
-  el('rect', { x: 0, y: 0, width: w, height: h, fill: '#fffdf8', stroke: '#555', 'stroke-width': 0.08 }, svg);
+  el('rect', { x: 0, y: 0, width: w, height: h, fill: '#fbf8f1', stroke: '#c9bfae', 'stroke-width': 0.08, rx: 0.15 }, svg);
 
   for (const o of state.obstacles) {
     const g = el('g', { class: 'obstacle' }, svg);
-    el('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: '#d9d4c7', stroke: '#9a9280', 'stroke-width': 0.05 }, g);
-    el('text', { x: o.x + o.w / 2, y: o.y + o.h / 2, 'font-size': 0.5, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#555' }, g).textContent = o.name;
+    el('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: '#e9e1d2', stroke: '#c9b89a', 'stroke-width': 0.05, rx: 0.12 }, g);
+    el('text', { x: o.x + o.w / 2, y: o.y + o.h / 2, 'font-size': 0.5, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#7a6c58', 'font-family': 'Inter, sans-serif', 'font-weight': 600 }, g).textContent = o.name;
     g.addEventListener('pointerdown', (e) => startDrag(e, o, 0, state.room.w - o.w, 0, state.room.h - o.h));
   }
 
@@ -119,10 +119,10 @@ function draw() {
     const g = el('g', { class: 'table' }, svg);
     for (let i = 0; i < t.chairs; i++) {
       const a = (i / t.chairs) * 2 * Math.PI;
-      el('circle', { cx: p.x + Math.cos(a) * (r + 0.25), cy: p.y + Math.sin(a) * (r + 0.25), r: 0.2, fill: '#8aa1b1' }, g);
+      el('circle', { cx: p.x + Math.cos(a) * (r + 0.25), cy: p.y + Math.sin(a) * (r + 0.25), r: 0.2, fill: '#7d9a8c', stroke: '#fff', 'stroke-width': 0.04 }, g);
     }
-    el('circle', { cx: p.x, cy: p.y, r, fill: t.pinned ? '#fff4dc' : '#fff', stroke: '#6b4f2a', 'stroke-width': 0.06 }, g);
-    el('text', { x: p.x, y: p.y, 'font-size': 0.3, 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-weight': 'bold' }, g).textContent = tableName(t);
+    el('circle', { cx: p.x, cy: p.y, r, fill: t.pinned ? '#f6e3c6' : '#fff', stroke: '#b5793a', 'stroke-width': 0.07 }, g);
+    el('text', { x: p.x, y: p.y, 'font-size': 0.3, 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-weight': 600, 'font-family': 'Inter, sans-serif', fill: '#5a4026' }, g).textContent = tableName(t);
     g.addEventListener('pointerdown', (e) => {
       t.x = p.x; t.y = p.y; t.pinned = true;
       const fr = footprint(t.chairs);
@@ -133,7 +133,7 @@ function draw() {
 
 const tableName = (t) => t.name ?? `Mesa ${t.num}`;
 
-// ---------- Arrastar mesas e áreas bloqueadas ----------
+// ---------- Arrastar mesas e Ã¡reas bloqueadas ----------
 
 function startDrag(e, o, minX, maxX, minY, maxY) {
   const toRoom = (ev) => {
@@ -171,7 +171,7 @@ function numInput(value, onChange, attrs = {}) {
 function delButton(onClick) {
   const b = document.createElement('button');
   b.className = 'del';
-  b.textContent = '✕';
+  b.textContent = 'âœ•';
   b.addEventListener('click', onClick);
   return b;
 }
@@ -191,7 +191,7 @@ function renderPanel() {
     name.value = o.name;
     name.addEventListener('change', () => { o.name = name.value; update(); });
     div.append(name,
-      numInput(o.w, (v) => { o.w = v; update(); }, { step: 0.5, title: 'Largura' }), '×',
+      numInput(o.w, (v) => { o.w = v; update(); }, { step: 0.5, title: 'Largura' }), 'Ã—',
       numInput(o.h, (v) => { o.h = v; update(); }, { step: 0.5, title: 'Comprimento' }),
       delButton(() => { state.obstacles = state.obstacles.filter((x) => x !== o); update(); }));
     ol.appendChild(div);
@@ -208,10 +208,10 @@ function renderPanel() {
     name.addEventListener('change', () => { t.name = name.value; update(); });
     div.append(name,
       numInput(t.chairs, (v) => { t.chairs = Math.round(v); update(); }, { min: 2, max: 20, title: 'Cadeiras' }),
-      positions[t.id] ? '' : '(não coube)');
+      positions[t.id] ? '' : '(nÃ£o coube)');
     if (t.pinned) {
       const unpin = document.createElement('button');
-      unpin.textContent = '📌';
+      unpin.textContent = 'ðŸ“Œ';
       unpin.title = 'Soltar mesa (volta a ser organizada automaticamente)';
       unpin.addEventListener('click', () => { t.pinned = false; update(); });
       div.append(unpin);
@@ -223,7 +223,7 @@ function renderPanel() {
   const placed = state.tables.filter((t) => positions[t.id]);
   const seats = placed.reduce((s, t) => s + t.chairs, 0);
   const missing = state.tables.length - placed.length;
-  $('summary').textContent = `${placed.length} mesas · ${seats} lugares` + (missing ? ` · ${missing} não couberam` : '');
+  $('summary').textContent = `${placed.length} mesas Â· ${seats} lugares` + (missing ? ` Â· ${missing} nÃ£o couberam` : '');
 }
 
 function update() {
@@ -239,7 +239,7 @@ $('spacing').addEventListener('change', (e) => { const v = parseFloat(e.target.v
 
 $('addObstacle').addEventListener('click', () => {
   const id = Math.max(0, ...state.obstacles.map((o) => o.id)) + 1;
-  state.obstacles.push({ id, name: 'Área', x: 0, y: 0, w: 2, h: 2 });
+  state.obstacles.push({ id, name: 'Ãrea', x: 0, y: 0, w: 2, h: 2 });
   update();
 });
 
