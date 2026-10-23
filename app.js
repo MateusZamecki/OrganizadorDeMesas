@@ -1,4 +1,4 @@
-﻿const CHAIR_WIDTH = 0.6;  // espaÃ§o de cada cadeira em volta da mesa (m)
+const CHAIR_WIDTH = 0.6;  // espaço de cada cadeira em volta da mesa (m)
 const CHAIR_DEPTH = 0.5;  // quanto a cadeira ocupa para fora da mesa (m)
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -32,8 +32,8 @@ function distToRect(x, y, o) {
   return Math.hypot(dx, dy);
 }
 
-// Menor folga atÃ© paredes, Ã¡reas bloqueadas e outras mesas (negativa = invÃ¡lido).
-// A folga atÃ© a parede vale em dobro, para que a distÃ¢ncia Ã  parede fique ~metade do corredor entre mesas.
+// Menor folga até paredes, áreas bloqueadas e outras mesas (negativa = inválido).
+// A folga até a parede vale em dobro, para que a distância à parede fique ~metade do corredor entre mesas.
 function clearance(x, y, r, others) {
   const { w, h } = state.room;
   const s = state.spacing;
@@ -43,7 +43,7 @@ function clearance(x, y, r, others) {
   return min - s;
 }
 
-// ---------- OrganizaÃ§Ã£o automÃ¡tica ----------
+// ---------- Organização automática ----------
 
 function arrange() {
   const step = 0.1;
@@ -54,7 +54,7 @@ function arrange() {
   const placed = pinned.map((t) => ({ id: t.id, x: t.x, y: t.y, r: footprint(t.chairs), fixed: true }));
   positions = {};
 
-  // 1) Encaixe guloso: cada mesa (maiores primeiro) vai na primeira posiÃ§Ã£o livre.
+  // 1) Encaixe guloso: cada mesa (maiores primeiro) vai na primeira posição livre.
   for (const t of sorted) {
     const r = footprint(t.chairs);
     search:
@@ -68,7 +68,7 @@ function arrange() {
     }
   }
 
-  // 2) Espalha as mesas pelo salÃ£o, aumentando a folga de cada uma enquanto possÃ­vel.
+  // 2) Espalha as mesas pelo salão, aumentando a folga de cada uma enquanto possível.
   const dirs = [...Array(8)].map((_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
   for (const move of [1, 0.5, 0.25, 0.1, 0.05]) {
     for (let iter = 0; iter < 25; iter++) {
@@ -133,7 +133,7 @@ function draw() {
 
 const tableName = (t) => t.name ?? `Mesa ${t.num}`;
 
-// ---------- Arrastar mesas e Ã¡reas bloqueadas ----------
+// ---------- Arrastar mesas e áreas bloqueadas ----------
 
 function startDrag(e, o, minX, maxX, minY, maxY) {
   const toRoom = (ev) => {
@@ -171,7 +171,7 @@ function numInput(value, onChange, attrs = {}) {
 function delButton(onClick) {
   const b = document.createElement('button');
   b.className = 'del';
-  b.textContent = 'âœ•';
+  b.textContent = '✕';
   b.addEventListener('click', onClick);
   return b;
 }
@@ -191,7 +191,7 @@ function renderPanel() {
     name.value = o.name;
     name.addEventListener('change', () => { o.name = name.value; update(); });
     div.append(name,
-      numInput(o.w, (v) => { o.w = v; update(); }, { step: 0.5, title: 'Largura' }), 'Ã—',
+      numInput(o.w, (v) => { o.w = v; update(); }, { step: 0.5, title: 'Largura' }), '×',
       numInput(o.h, (v) => { o.h = v; update(); }, { step: 0.5, title: 'Comprimento' }),
       delButton(() => { state.obstacles = state.obstacles.filter((x) => x !== o); update(); }));
     ol.appendChild(div);
@@ -208,10 +208,10 @@ function renderPanel() {
     name.addEventListener('change', () => { t.name = name.value; update(); });
     div.append(name,
       numInput(t.chairs, (v) => { t.chairs = Math.round(v); update(); }, { min: 2, max: 20, title: 'Cadeiras' }),
-      positions[t.id] ? '' : '(nÃ£o coube)');
+      positions[t.id] ? '' : '(não coube)');
     if (t.pinned) {
       const unpin = document.createElement('button');
-      unpin.textContent = 'ðŸ“Œ';
+      unpin.textContent = '📌';
       unpin.title = 'Soltar mesa (volta a ser organizada automaticamente)';
       unpin.addEventListener('click', () => { t.pinned = false; update(); });
       div.append(unpin);
@@ -223,7 +223,7 @@ function renderPanel() {
   const placed = state.tables.filter((t) => positions[t.id]);
   const seats = placed.reduce((s, t) => s + t.chairs, 0);
   const missing = state.tables.length - placed.length;
-  $('summary').textContent = `${placed.length} mesas Â· ${seats} lugares` + (missing ? ` Â· ${missing} nÃ£o couberam` : '');
+  $('summary').textContent = `${placed.length} mesas · ${seats} lugares` + (missing ? ` · ${missing} não couberam` : '');
 }
 
 function update() {
@@ -239,7 +239,7 @@ $('spacing').addEventListener('change', (e) => { const v = parseFloat(e.target.v
 
 $('addObstacle').addEventListener('click', () => {
   const id = Math.max(0, ...state.obstacles.map((o) => o.id)) + 1;
-  state.obstacles.push({ id, name: 'Ãrea', x: 0, y: 0, w: 2, h: 2 });
+  state.obstacles.push({ id, name: 'Área', x: 0, y: 0, w: 2, h: 2 });
   update();
 });
 
